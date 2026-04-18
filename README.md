@@ -77,6 +77,10 @@ bash scripts/run_gui.sh
 
 ### Windows
 
+#### Быстрая установка для новичков
+
+Если вы новичок в программировании, следуйте [детальной инструкции для Windows](WINDOWS_INSTALLATION.md).
+
 #### Клонирование репозитория
 ```bash
 git clone https://github.com/yourusername/VitalSign.git
