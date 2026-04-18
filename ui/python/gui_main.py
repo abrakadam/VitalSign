@@ -476,6 +476,10 @@ class VitalSignGUI(QMainWindow):
         ports_tab = self.create_ports_tab()
         tab_widget.addTab(ports_tab, t('ports'))
         
+        # Вкладка "Мониторы"
+        monitors_tab = self.create_monitors_tab()
+        tab_widget.addTab(monitors_tab, t('monitors'))
+        
         # Вкладка "Помощник"
         helper_tab = self.create_helper_tab()
         tab_widget.addTab(helper_tab, t('helper'))
@@ -1428,6 +1432,118 @@ class VitalSignGUI(QMainWindow):
     def refresh_ports_tab(self, scroll):
         """Обновить вкладку портов"""
         new_tab = self.create_ports_tab()
+        scroll.setWidget(new_tab)
+    
+    def create_monitors_tab(self) -> QWidget:
+        """Создать вкладку мониторов"""
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
+        
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(15)
+        
+        # Заголовок
+        title_label = StyledLabel(t('monitor_analysis'), 'subtitle')
+        layout.addWidget(title_label)
+        
+        # Загружаем информацию о мониторах
+        try:
+            from monitor_analyzer import MonitorAnalyzer
+            analyzer = MonitorAnalyzer()
+            monitors = analyzer.get_monitors()
+            
+            if not monitors:
+                no_monitors_label = StyledLabel(t('no_monitors'), 'normal')
+                layout.addWidget(no_monitors_label)
+            else:
+                # Показываем каждый монитор
+                for monitor in monitors:
+                    # Карточка монитора
+                    monitor_card = CardWidget(monitor.get('name', 'Unknown'))
+                    monitor_layout = QVBoxLayout()
+                    
+                    # Основная информация
+                    monitor_layout.addWidget(StyledLabel(f'{t("monitor_name")}: {monitor.get("name", "N/A")}', 'normal'))
+                    monitor_layout.addWidget(StyledLabel(f'{t("monitor_model")}: {monitor.get("model", "N/A")}', 'normal'))
+                    monitor_layout.addWidget(StyledLabel(f'{t("monitor_manufacturer")}: {monitor.get("manufacturer", "N/A")}', 'normal'))
+                    monitor_layout.addWidget(StyledLabel(f'{t("monitor_connection")}: {monitor.get("connection", "N/A")}', 'normal'))
+                    
+                    # Разрешение
+                    width = monitor.get('width', 0)
+                    height = monitor.get('height', 0)
+                    if width > 0 and height > 0:
+                        monitor_layout.addWidget(StyledLabel(f'{t("monitor_resolution")}: {width}x{height}', 'normal'))
+                    
+                    # Частота обновления
+                    refresh_rate = monitor.get('refresh_rate', 0)
+                    if refresh_rate > 0:
+                        monitor_layout.addWidget(StyledLabel(f'{t("monitor_refresh")}: {refresh_rate} Hz', 'normal'))
+                    
+                    # Статус
+                    status_text = monitor.get('status', 'Unknown')
+                    if monitor.get('is_primary'):
+                        status_text += f' ({t("primary_monitor")})'
+                    monitor_layout.addWidget(StyledLabel(f'{t("monitor_status")}: {status_text}', 'normal'))
+                    
+                    # Проверка здоровья
+                    health = analyzer.check_monitor_health(monitor)
+                    
+                    # Оценка здоровья
+                    health_score = health.get('health_score', 0)
+                    health_color = '#4caf50' if health_score >= 80 else '#ff9800' if health_score >= 60 else '#f44336'
+                    health_label = StyledLabel(f'{t("monitor_score")}: {health_score}/100', 'normal')
+                    health_label.setStyleSheet(f"color: {health_color}; font-weight: bold;")
+                    monitor_layout.addWidget(health_label)
+                    
+                    # Общий статус
+                    overall_status = health.get('overall_status', 'Unknown')
+                    monitor_layout.addWidget(StyledLabel(f'{t("monitor_health")}: {overall_status}', 'normal'))
+                    
+                    # Проблемы
+                    issues = health.get('issues', [])
+                    if issues:
+                        issues_card = CardWidget(t('monitor_issues'))
+                        issues_layout = QVBoxLayout()
+                        for issue in issues:
+                            issues_layout.addWidget(StyledLabel(f'• {issue}', 'small'))
+                        issues_card.add_layout(issues_layout)
+                        monitor_layout.addWidget(issues_card)
+                    
+                    monitor_card.add_layout(monitor_layout)
+                    layout.addWidget(monitor_card)
+                    
+        except ImportError:
+            error_label = StyledLabel('Модуль анализа мониторов недоступен', 'normal')
+            layout.addWidget(error_label)
+        
+        # Кнопка обновления
+        refresh_button = QPushButton(t('monitor_check'))
+        refresh_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4285f4;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #3367d6;
+            }
+        """)
+        refresh_button.clicked.connect(lambda: self.refresh_monitors_tab(scroll))
+        layout.addWidget(refresh_button)
+        
+        layout.addStretch()
+        
+        scroll.setWidget(widget)
+        return scroll
+    
+    def refresh_monitors_tab(self, scroll):
+        """Обновить вкладку мониторов"""
+        new_tab = self.create_monitors_tab()
         scroll.setWidget(new_tab)
     
     def create_cpu_rating_tab(self) -> QWidget:
