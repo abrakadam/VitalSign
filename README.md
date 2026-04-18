@@ -298,6 +298,34 @@ python ui/python/gui_main.py
 2. Добавьте импорт в `main/linux/__init__.py`
 3. Используйте в GUI
 
+### Использование Config Manager
+
+ConfigManager создает директорию `~/.VitalSign` для хранения конфигураций:
+
+```python
+from helpers.python.config_manager import ConfigManager
+
+config = ConfigManager()
+
+# Сохранить настройки
+config.save_config("language", "ru")
+config.save_config("theme", "dark")
+
+# Загрузить настройки
+language = config.load_config("language")
+theme = config.load_config("theme")
+
+# Сохранить JSON данные
+config.save_json_config("window_state", {"x": 100, "y": 200, "width": 800, "height": 600})
+
+# Сохранить локализацию
+config.save_locale_data("ru", '{"hello": "Привет"}')
+config.load_locale_data("ru")
+
+# Получить список доступных локализаций
+locales = config.get_available_locales()
+```
+
 ---
 
 ## 📝 Требования
