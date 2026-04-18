@@ -300,8 +300,23 @@ python ui/python/gui_main.py
 
 ### Использование Config Manager
 
-ConfigManager создает директорию `~/.VitalSign` для хранения конфигураций:
+ConfigManager создает директорию для хранения конфигураций:
+- **Linux/Mac**: `~/.VitalSign/`
+- **Windows**: `%APPDATA%\VitalSign\` или `%USERPROFILE%\AppData\Roaming\VitalSign\`
 
+Структура папки:
+```
+~/.VitalSign/ (Linux/Mac)
+или
+%APPDATA%\VitalSign\ (Windows)
+├── config.ini          # Основной файл конфигурации (INI формат)
+└── locales/            # Папка для локализаций
+    ├── ru.json         # Русская локализация
+    ├── en.json         # Английская локализация
+    └── ...
+```
+
+Пример использования:
 ```python
 from helpers.python.config_manager import ConfigManager
 

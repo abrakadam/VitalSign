@@ -20,8 +20,22 @@ class ConfigManager:
     
     def _get_config_dir(self) -> str:
         """Получить директорию конфигурации"""
-        home = os.path.expanduser("~")
-        return os.path.join(home, ".VitalSign")
+        if os.name == 'nt':  # Windows
+            # Используем APPDATA или USERPROFILE
+            appdata = os.environ.get('APPDATA')
+            userprofile = os.environ.get('USERPROFILE')
+            
+            if appdata:
+                return os.path.join(appdata, 'VitalSign')
+            elif userprofile:
+                return os.path.join(userprofile, 'AppData', 'Roaming', 'VitalSign')
+            else:
+                # Fallback на текущую директорию
+                return '.VitalSign'
+        else:  # Linux/Mac
+            # Используем HOME
+            home = os.path.expanduser("~")
+            return os.path.join(home, ".VitalSign")
     
     def create_config_dir(self) -> bool:
         """Создать директорию конфигурации"""

@@ -14,7 +14,21 @@ std::string ConfigManager::get_config_dir() {
         return config_dir;
     }
     
-    // Определяем домашнюю директорию пользователя
+#ifdef _WIN32
+    // Windows: используем APPDATA или USERPROFILE
+    const char* appdata = std::getenv("APPDATA");
+    const char* userprofile = std::getenv("USERPROFILE");
+    
+    if (appdata) {
+        config_dir = std::string(appdata) + "\\VitalSign";
+    } else if (userprofile) {
+        config_dir = std::string(userprofile) + "\\AppData\\Roaming\\VitalSign";
+    } else {
+        // Fallback на текущую директорию
+        config_dir = ".VitalSign";
+    }
+#else
+    // Linux/Mac: используем HOME
     const char* home = std::getenv("HOME");
     if (home) {
         config_dir = std::string(home) + "/.VitalSign";
@@ -22,6 +36,7 @@ std::string ConfigManager::get_config_dir() {
         // Fallback на текущую директорию
         config_dir = ".VitalSign";
     }
+#endif
     
     return config_dir;
 }
