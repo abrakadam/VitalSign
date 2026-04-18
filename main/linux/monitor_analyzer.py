@@ -24,16 +24,21 @@ class MonitorAnalyzer:
             
             current_monitor = {}
             in_monitor = False
+            current_refresh_rates = []
             
             for line in lines:
                 if ' connected' in line:
                     # Сохраняем предыдущий монитор если есть
                     if in_monitor and current_monitor:
+                        # Берем максимальную частоту обновления
+                        if current_refresh_rates:
+                            current_monitor['refresh_rate'] = max(current_refresh_rates)
                         monitors.append(current_monitor)
                     
                     # Начинаем новый монитор
                     current_monitor = {}
                     in_monitor = True
+                    current_refresh_rates = []
                     current_monitor['is_connected'] = True
                     current_monitor['is_enabled'] = 'connected primary' in line or 'connected ' in line
                     current_monitor['is_primary'] = 'primary' in line
@@ -71,18 +76,28 @@ class MonitorAnalyzer:
                         current_monitor['model'] = self._parse_edid_model(current_monitor['edid'])
                         current_monitor['serial'] = self._parse_edid_serial(current_monitor['edid'])
                     else:
-                        current_monitor['manufacturer'] = 'Unknown'
+                        # Если EDID недоступен, пробуем получить информацию из xrandr --props
+                        current_monitor['manufacturer'] = self._get_monitor_from_xrandr_props(current_monitor.get('name', ''))
                         current_monitor['model'] = current_monitor.get('name', 'Unknown')
                         current_monitor['serial'] = 'Unknown'
                     
-                    # Получаем частоту обновления
-                    current_monitor['refresh_rate'] = self._get_refresh_rate(line)
+                    # Получаем частоту обновления из текущей строки
+                    refresh_rate = self._get_refresh_rate(line)
+                    if refresh_rate > 0:
+                        current_refresh_rates.append(refresh_rate)
                     
                     # Статус
                     current_monitor['status'] = 'Active' if current_monitor['is_enabled'] else 'Connected but disabled'
+                elif in_monitor and line.strip().startswith('   '):
+                    # Парсим строки с разрешениями и частотами
+                    refresh_rate = self._get_refresh_rate(line)
+                    if refresh_rate > 0:
+                        current_refresh_rates.append(refresh_rate)
             
             # Добавляем последний монитор
             if in_monitor and current_monitor:
+                if current_refresh_rates:
+                    current_monitor['refresh_rate'] = max(current_refresh_rates)
                 monitors.append(current_monitor)
                 
         except Exception as e:
@@ -123,32 +138,93 @@ class MonitorAnalyzer:
         
         return ''
     
+    def _get_monitor_from_xrandr_props(self, monitor_name: str) -> str:
+        """Получить информацию о мониторе из xrandr --props"""
+        try:
+            result = subprocess.run(['xrandr', '--props'], capture_output=True, text=True, timeout=5)
+            lines = result.stdout.split('\n')
+            
+            for i, line in enumerate(lines):
+                if monitor_name in line and 'connected' in line:
+                    # Ищем информацию о производителе в следующих строках
+                    for j in range(i, min(i + 10, len(lines))):
+                        if 'EDID' in lines[j]:
+                            # Парсим EDID из xrandr --props
+                            edid_hex = lines[j].split(':')[-1].strip().strip('"')
+                            if len(edid_hex) > 20:
+                                return self._parse_edid_manufacturer(edid_hex)
+                    break
+        except Exception as e:
+            print(f"Ошибка при получении информации из xrandr --props: {e}")
+        
+        return 'Unknown'
+    
     def _parse_edid_manufacturer(self, edid: str) -> str:
         """Извлечь производителя из EDID"""
-        # Упрощенная реализация
-        # В реальном EDID производитель находится в байтах 8-9
-        if len(edid) >= 20:
-            manufacturer_code = edid[16:20]  # Байты 8-9 в hex
-            # Здесь можно добавить маппинг кодов производителей
-            return 'Unknown'
+        # EDID производитель в байтах 8-9 (3 бита каждый)
+        manufacturer_map = {
+            'AAC': 'Acer', 'ACI': 'Asus', 'ADK': 'AOC', 'AOC': 'AOC',
+            'APP': 'Apple', 'AUO': 'AU Optronics', 'BOE': 'BOE',
+            'CMN': 'Chimei Innolux', 'DEL': 'Dell', 'Dell': 'Dell',
+            'HPN': 'HP', 'HWP': 'HP', 'IBM': 'IBM', 'LEN': 'Lenovo',
+            'LGD': 'LG Display', 'MSI': 'MSI', 'NVD': 'NVIDIA',
+            'PHL': 'Philips', 'SAM': 'Samsung', 'SEC': 'Samsung',
+            'SII': 'Seiko', 'SNY': 'Sony', 'TSB': 'Toshiba',
+            'VSC': 'ViewSonic', 'YMH': 'Yamaha'
+        }
+        
+        try:
+            if len(edid) >= 20:
+                # Байты 8-9 в hex (пропускаем первые 16 символов - это заголовок EDID)
+                # Формат: 3 бита + 3 бита + 2 бита (padding)
+                if len(edid) >= 32:
+                    byte8 = int(edid[16:18], 16)
+                    byte9 = int(edid[18:20], 16)
+                    
+                    # Декодируем производителя (5-битные коды)
+                    char1 = ((byte8 >> 2) & 0x1F)
+                    char2 = ((byte8 & 0x03) << 3) | ((byte9 >> 5) & 0x07)
+                    char3 = (byte9 & 0x1F)
+                    
+                    # Конвертируем в ASCII (сдвиг на 64)
+                    mfg = chr(char1 + 64) + chr(char2 + 64) + chr(char3 + 64)
+                    
+                    if mfg in manufacturer_map:
+                        return manufacturer_map[mfg]
+                    return mfg
+        except Exception as e:
+            print(f"Ошибка при парсинге производителя EDID: {e}")
+        
         return 'Unknown'
     
     def _parse_edid_model(self, edid: str) -> str:
         """Извлечь модель из EDID"""
-        # Упрощенная реализация
-        # В реальном EDID модель находится в байтах 10-11
-        if len(edid) >= 28:
-            model_code = edid[20:28]
-            return f'Model-{model_code}'
+        # Модель в байтах 10-11 (little-endian)
+        try:
+            if len(edid) >= 32:
+                byte10 = int(edid[20:22], 16)
+                byte11 = int(edid[22:24], 16)
+                model = (byte11 << 8) | byte10
+                if model > 0:
+                    return str(model)
+        except Exception as e:
+            print(f"Ошибка при парсинге модели EDID: {e}")
         return 'Unknown'
     
     def _parse_edid_serial(self, edid: str) -> str:
         """Извлечь серийный номер из EDID"""
-        # Упрощенная реализация
-        # В реальном EDID серийный номер находится в байтах 12-15
-        if len(edid) >= 36:
-            serial_code = edid[24:36]
-            return f'SN-{serial_code}'
+        # Серийный номер в байтах 12-15 (little-endian)
+        try:
+            if len(edid) >= 40:
+                byte12 = int(edid[24:26], 16)
+                byte13 = int(edid[26:28], 16)
+                byte14 = int(edid[28:30], 16)
+                byte15 = int(edid[30:32], 16)
+                serial = (byte15 << 24) | (byte14 << 16) | (byte13 << 8) | byte12
+                if serial > 0:
+                    return str(serial)
+        except Exception as e:
+            print(f"Ошибка при парсинге серийного номера EDID: {e}")
         return 'Unknown'
     
     def _get_refresh_rate(self, line: str) -> int:
