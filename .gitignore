@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+# Python virtual environments build dirs
+# Note: project uses build/ for C++ compilation, so it's not ignored
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+build/
+*.exe
+*.app
+
+# Nuitka
+*.build/
+*.dist/
+*.onefile-build/
+
+# Локали (но не файлы переводов)
+locales/
+!locales/*.json
+
+# C++
+cpp/build/
+cpp/*.o
+cpp/*.exe
+main/cpp/build/
+main/cpp/*.o
+helpers/cpp/*.o
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

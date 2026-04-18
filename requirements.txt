@@ -1,0 +1,10 @@
+psutil==5.9.8
+PyQt6==6.6.1
+matplotlib==3.8.2
+numpy==1.26.3
+GPUtil==1.4.0
+py-cpuinfo==9.0.0
+pybind11==2.11.1
+# Опциональные зависимости для мониторинга окон (только Windows)
+# pywin32==306
+# pygetwindow==0.0.9
