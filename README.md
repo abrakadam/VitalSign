@@ -178,8 +178,8 @@ rpmbuild -ba vitalsign.spec
 ```
 VitalSign/
 ├── helpers/                 # Вспомогательные модули
-│   ├── cpp/                # C++ хелперы (cpu_rater, gpu_rater)
-│   ├── python/             # Python хелперы (web_helper)
+│   ├── cpp/                # C++ хелперы (cpu_rater, gpu_rater, monitor_analyzer, keyboard_analyzer, config_manager)
+│   ├── python/             # Python хелперы (web_helper, config_manager)
 │   └── README.md
 ├── main/                   # Основные анализаторы
 │   ├── cpp/                # Системные C++ библиотеки
